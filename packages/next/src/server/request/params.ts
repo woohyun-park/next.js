@@ -724,9 +724,9 @@ function makeHangingParams(
       prerenderStore.renderSignal,
       workStore.route,
       '`params`',
-      // This promise is created for every segment on a fallback route whether
-      // or not it reads params, so recording the access at creation would mark
-      // every render. The access is tracked in the proxy traps instead.
+      // The access is tracked in the proxy traps instead,
+      // because it needs to include additional logic around
+      // `dynamicAccessStorage` which is used in caches.
       null
     ),
     fallbackParamsProxyHandler

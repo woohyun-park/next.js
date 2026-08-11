@@ -141,12 +141,16 @@ export function makeRuntimeHangingPromise<T>(
   expression: string,
   workUnitStore: WorkUnitStore | null
 ): Promise<T> {
-  if (workUnitStore !== null) {
-    trackRuntimeDataAccessed(workUnitStore)
-  }
-  return makeHangingPromiseWithError(
+  const promise = makeHangingPromiseWithError<T>(
     signal,
     new HangingPromiseRejectionError(route, expression)
+  )
+  if (workUnitStore === null) {
+    return promise
+  }
+  return trackPromiseUsed(
+    promise,
+    trackRuntimeDataAccessed.bind(null, workUnitStore)
   )
 }
 
@@ -173,12 +177,16 @@ export function makeFallbackParamsHangingPromise<T>(
   expression: string,
   workUnitStore: WorkUnitStore | null
 ): Promise<T> {
-  if (workUnitStore !== null) {
-    trackFallbackParamsAccessed(workUnitStore)
-  }
-  return makeHangingPromiseWithError(
+  const promise = makeHangingPromiseWithError<T>(
     signal,
     new HangingPromiseRejectionError(route, expression)
+  )
+  if (workUnitStore === null) {
+    return promise
+  }
+  return trackPromiseUsed(
+    promise,
+    trackFallbackParamsAccessed.bind(null, workUnitStore)
   )
 }
 
@@ -202,10 +210,12 @@ export function makeStageHangingPromise<T>(
   expression: string,
   workUnitStore: WorkUnitStore
 ): Promise<T> {
-  trackRuntimeDataAccessed(workUnitStore)
-  return makeHangingPromiseWithError(
-    signal,
-    new HangingPromiseRejectionError(route, expression)
+  return trackPromiseUsed(
+    makeHangingPromiseWithError(
+      signal,
+      new HangingPromiseRejectionError(route, expression)
+    ),
+    trackRuntimeDataAccessed.bind(null, workUnitStore)
   )
 }
 

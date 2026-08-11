@@ -18,6 +18,11 @@ export default function Page() {
           <LinkAccordion href="/uses-cookies">Uses cookies</LinkAccordion>
         </li>
         <li>
+          <LinkAccordion href="/runtime-called-but-not-awaited">
+            Calls Runtime APIs but does not await them
+          </LinkAccordion>
+        </li>
+        <li>
           <LinkAccordion href="/uses-search-params?q=test">
             Uses search params
           </LinkAccordion>

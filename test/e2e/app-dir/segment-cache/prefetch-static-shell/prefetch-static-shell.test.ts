@@ -235,6 +235,65 @@ describe('static App Shell prefetch attempt', () => {
     )
   })
 
+  it("does not fall back to a runtime shell prefetch for a partial segment that calls runtime APIs but doesn't await them", async () => {
+    let page: Playwright.Page
+    const browser = await next.browser('/', {
+      beforePageLoad(p: Playwright.Page) {
+        page = p
+      },
+    })
+    const act = createRouterAct(page, { includeAppShellRequests: true })
+
+    // Reveal the LinkAccordion for /uses-connection. `connection()` is
+    // dynamic data (it hangs during runtime prerenders too), so it's not
+    // recorded as a runtime-data access: the tree hint is set, the static
+    // attempt fires, and although the page segment is partial, it's
+    // sufficient — a runtime prefetch would have the same hole. No runtime
+    // fallback fires.
+    await act(async () => {
+      await browser
+        .elementByCss(
+          'input[data-link-accordion="/runtime-called-but-not-awaited"]'
+        )
+        .click()
+    }, [
+      { includes: 'Runtime APIs called but not awaited', kind: 'static' },
+      // Neither the shell nor the dynamic content may arrive in a runtime
+      // prefetch response — no runtime request should fire at all.
+      {
+        includes: 'Runtime APIs called but not awaited',
+        kind: 'runtime',
+        block: 'reject',
+      },
+      { includes: 'Dynamic content', kind: 'runtime', block: 'reject' },
+    ])
+
+    // Navigate. The prefetched shell renders instantly; the dynamic hole is
+    // filled by the navigation-time dynamic request, as always.
+    await act(
+      async () => {
+        await browser
+          .elementByCss('a[href="/runtime-called-but-not-awaited"]')
+          .click()
+
+        // While the navigation response is blocked (we're still inside the
+        // `act` scope), the prefetched shell is already visible, with the
+        // loading fallback in place of the dynamic content.
+        expect(await browser.elementById('page-content').text()).toBe(
+          'Runtime APIs called but not awaited'
+        )
+        expect(await browser.elementById('dynamic-loading').text()).toBe(
+          'Loading dynamic content...'
+        )
+      },
+      // The dynamic content streams in with the navigation response.
+      { includes: 'Dynamic content' }
+    )
+    expect(await browser.elementById('dynamic-content').text()).toBe(
+      'Dynamic content'
+    )
+  })
+
   it('reuses the static App Shell across different param values of a dynamic route', async () => {
     let page: Playwright.Page
     const browser = await next.browser('/', {
